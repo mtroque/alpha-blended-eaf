@@ -1,0 +1,48 @@
+# Sweep configuration for the cross-validated hyperparameter search.
+#
+# The plan follows the Nalen sample table:
+#   Stage 1: vary r with epsilon fixed at 0.1
+#   Stage 2: vary epsilon with r fixed at the WINNER from Stage 1
+#
+# Stage 2's r value is left as null and must be filled in after Stage 1
+# completes — either manually before launching Stage 2, or by an analysis
+# script that reads Stage 1 results and writes the winning r back here.
+
+n_folds: 10
+random_seed: 42
+
+# Training hyperparameters held constant across all configurations and folds.
+# Activation type/parameters are the ONLY thing that varies.
+training:
+  model_yaml: configs/model_eaf.yaml
+  epochs: 12
+  batch: 4
+  imgsz: 640
+  optimizer: AdamW
+  lr0: 1.0e-3
+  warmup_epochs: 3.0
+  amp: false
+  workers: 16
+  pretrained: false
+
+stage1:
+  description: "Vary r with epsilon fixed at 0.1"
+  fixed:
+    epsilon: 0.1
+  varied:
+    r: [0.3, 0.4, 0.5, 0.6]
+
+stage2:
+  description: "Vary epsilon with r fixed at Stage 1 winner"
+  fixed:
+    r: null    # FILL IN with the winning r from Stage 1 results
+  varied:
+    epsilon: [0.2, 0.3, 0.4]
+
+# Baseline activations for comparison (Section 10 of the evaluation guideline).
+baselines:
+  description: "Standard activations for benchmarking the EAF"
+  activations:
+    - "torch.nn.ReLU()"
+    - "torch.nn.LeakyReLU(0.01)"
+    - "torch.nn.SiLU()"

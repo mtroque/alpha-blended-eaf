@@ -1,0 +1,25 @@
+# Dataset YAML — TEMPLATE
+#
+# This file is a TEMPLATE. The kfold_split.py script generates one concrete
+# version per fold (dataset_fold0.yaml, dataset_fold1.yaml, ...) with the
+# `path`, `train`, and `val` fields pointing to the right fold-specific
+# directories.
+#
+# Class IDs and names are constant across all folds.
+
+path: ./Japan_kfold/fold0        # OVERWRITTEN per fold
+train: train/images               # constant relative to path
+val: val/images                   # constant relative to path
+
+nc: 9
+
+names:
+  0: 'D00'   # Longitudinal wheel mark
+  1: 'D01'   # Longitudinal construction joint
+  2: 'D10'   # Lateral equal interval
+  3: 'D11'   # Lateral construction joint
+  4: 'D20'   # Alligator crack
+  5: 'D40'   # Pothole/rutting
+  6: 'D43'   # Crosswalk blur
+  7: 'D44'   # White line blur
+  8: 'D50'   # Manhole

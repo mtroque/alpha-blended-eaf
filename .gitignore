@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Experiment artifacts that should NOT be in the repo
+runs/
+weights/
+*.pt
+*.pth
+*.onnx
+
+# Datasets (downloaded fresh per environment)
+Japan/
+Japan_split/
+Japan_kfold/
+RDD2022_Japan*
+
+# Drive cache
+cache/
+
+# Local Ultralytics clone (only relevant for local development)
+ultralytics/
