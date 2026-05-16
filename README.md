@@ -14,6 +14,7 @@ This repository accompanies an ongoing research project; results and the paper d
 | `data_prep/xml_parser.py` | Converts RDD2022 VOC annotations to YOLO format |
 | `data_prep/kfold_split.py` | Generates stratified 10-fold splits with a fixed seed |
 | `runner/verify_patch.py` | End-to-end sanity check that the activation injection actually works |
+| `runner/run_sweep_stage1.py` | Stage 1 sweep: 4 configs × 10 folds = 40 training runs |
 | `colab_run.sh` | Single entry-point bash script for Colab |
 | `notebooks/EAF_RDD2022_Colab.ipynb` | One-cell Colab notebook that runs the pipeline |
 
