@@ -35,7 +35,7 @@ stage1:
 stage2:
   description: "Vary epsilon with r fixed at Stage 1 winner"
   fixed:
-    r: null    # FILL IN with the winning r from Stage 1 results
+    r: 0.6
   varied:
     epsilon: [0.2, 0.3, 0.4]
 
