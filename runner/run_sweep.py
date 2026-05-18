@@ -65,8 +65,8 @@ def write_yaml(data: dict, path: str) -> None:
         yaml.safe_dump(data, f, sort_keys=False)
 
 
-def config_name(epsilon: float, r: float) -> str:
-    return f"stage1_eps{epsilon}_r{r}"
+def config_name(stage: str, epsilon: float, r: float) -> str:
+    return f"{stage}_eps{epsilon}_r{r}"
 
 
 def is_done(fold_dir: Path) -> bool:
@@ -286,30 +286,51 @@ def train_one_fold(
 def run_sweep(args):
     # Load sweep config.
     cfg = load_yaml(args.sweep_config)
-    stage1_cfg  = cfg["stage1"]
+
+    stage_cfg    = cfg[args.stage]
     training_cfg = cfg["training"]
     n_folds      = cfg.get("n_folds", 10)
 
-    epsilon_fixed = stage1_cfg["fixed"]["epsilon"]
-    r_values      = stage1_cfg["varied"]["r"]
+    fixed_cfg  = stage_cfg["fixed"]
+    varied_cfg = stage_cfg["varied"]
+
+    # Determine epsilon sweep/fixed behaviour
+    if fixed_cfg.get("epsilon") is not None:
+        epsilon_values = [fixed_cfg["epsilon"]]
+    else:
+        epsilon_values = varied_cfg["epsilon"]
+
+    # Determine r sweep/fixed behaviour
+    if fixed_cfg.get("r") is not None:
+        r_values = [fixed_cfg["r"]]
+    else:
+        r_values = varied_cfg["r"]
 
     kfold_dir   = Path(args.kfold_dir)
     results_dir = Path(args.results_dir) / "sweep_runs"
     repo_root   = Path(args.repo_root)
-    all_runs_csv = Path(args.results_dir) / "sweep_runs" / "all_runs.csv"
+    all_runs_csv = results_dir / "all_runs.csv"
 
     results_dir.mkdir(parents=True, exist_ok=True)
 
     n_folds_to_run = 1 if args.dry_run else n_folds
-    r_values_to_run = [r_values[0]] if args.dry_run else r_values
 
-    total_planned = len(r_values_to_run) * n_folds_to_run
+    r_values_to_run = [r_values[0]] if args.dry_run else r_values
+    epsilon_values_to_run = (
+        [epsilon_values[0]] if args.dry_run else epsilon_values
+    )
+
+    total_planned = (
+        len(r_values_to_run)
+        * len(epsilon_values_to_run)
+        * n_folds_to_run
+    )
     total_done    = 0
     total_skipped = 0
 
     print("=" * 64)
-    print(f"alpha-blended-eaf  |  Stage 1 Sweep")
-    print(f"  epsilon (fixed):  {epsilon_fixed}")
+    print(f"alpha-blended-eaf  |  {args.stage} Sweep")
+    print(f"  epsilon values:   {epsilon_values_to_run}")
     print(f"  r values:         {r_values_to_run}")
     print(f"  folds:            {n_folds_to_run}")
     print(f"  planned runs:     {total_planned}")
@@ -317,109 +338,112 @@ def run_sweep(args):
     print(f"  results root:     {results_dir}")
     print("=" * 64)
 
-    for r in r_values_to_run:
-        cname      = config_name(epsilon_fixed, r)
-        config_dir = results_dir / cname
-        config_dir.mkdir(parents=True, exist_ok=True)
+    for epsilon_fixed in epsilon_values_to_run:
+        for r in r_values_to_run:
 
-        fold_rows = []
+            cname = config_name(args.stage, epsilon_fixed, r)
 
-        # Pre-populate fold_rows with any already-completed folds.
-        for k in range(n_folds_to_run):
-            fold_dir = config_dir / f"fold{k}"
-            if is_done(fold_dir):
-                # Try to read back saved metrics for the summary CSV.
-                saved_args = fold_dir / "args.yaml"
-                saved_metrics_row = {"fold": k, "precision": -1.0, "recall": -1.0,
-                                     "f1": -1.0, "map50": -1.0, "map5095": -1.0,
-                                     "training_time_sec": -1.0}
-                # Check if there's a row in all_runs.csv already.
-                if all_runs_csv.exists():
-                    with open(all_runs_csv) as f:
-                        for row in csv.DictReader(f):
-                            if row["config_name"] == cname and int(row["fold"]) == k:
-                                saved_metrics_row = {
-                                    "fold":               k,
-                                    "precision":          float(row["precision"]),
-                                    "recall":             float(row["recall"]),
-                                    "f1":                 float(row["f1"]),
-                                    "map50":              float(row["map50"]),
-                                    "map5095":            float(row["map5095"]),
-                                    "training_time_sec":  float(row["training_time_sec"]),
-                                }
-                fold_rows.append(saved_metrics_row)
+            config_dir = results_dir / cname
+            config_dir.mkdir(parents=True, exist_ok=True)
 
-        print(f"\nConfig: {cname}")
+            fold_rows = []
 
-        for k in range(n_folds_to_run):
-            fold_dir = config_dir / f"fold{k}"
-            fold_dir.mkdir(parents=True, exist_ok=True)
+            # Pre-populate fold_rows with any already-completed folds.
+            for k in range(n_folds_to_run):
+                fold_dir = config_dir / f"fold{k}"
+                if is_done(fold_dir):
+                    # Try to read back saved metrics for the summary CSV.
+                    saved_args = fold_dir / "args.yaml"
+                    saved_metrics_row = {"fold": k, "precision": -1.0, "recall": -1.0,
+                                        "f1": -1.0, "map50": -1.0, "map5095": -1.0,
+                                        "training_time_sec": -1.0}
+                    # Check if there's a row in all_runs.csv already.
+                    if all_runs_csv.exists():
+                        with open(all_runs_csv) as f:
+                            for row in csv.DictReader(f):
+                                if row["config_name"] == cname and int(row["fold"]) == k:
+                                    saved_metrics_row = {
+                                        "fold":               k,
+                                        "precision":          float(row["precision"]),
+                                        "recall":             float(row["recall"]),
+                                        "f1":                 float(row["f1"]),
+                                        "map50":              float(row["map50"]),
+                                        "map5095":            float(row["map5095"]),
+                                        "training_time_sec":  float(row["training_time_sec"]),
+                                    }
+                    fold_rows.append(saved_metrics_row)
 
-            if is_done(fold_dir):
-                total_skipped += 1
-                print(f"  Fold {k:2d}/{n_folds_to_run-1}  [SKIPPED — already done]")
-                continue
+            print(f"\nConfig: {cname}")
 
-            run_label = f"  Fold {k:2d}/{n_folds_to_run-1}"
-            print(f"{run_label}  [TRAINING]  r={r}  eps={epsilon_fixed}")
+            for k in range(n_folds_to_run):
+                fold_dir = config_dir / f"fold{k}"
+                fold_dir.mkdir(parents=True, exist_ok=True)
 
-            metrics = train_one_fold(
-                fold_idx         = k,
-                epsilon          = epsilon_fixed,
-                r                = r,
-                kfold_dir        = kfold_dir,
-                fold_results_dir = fold_dir,
-                repo_root        = repo_root,
-                training_cfg     = training_cfg,
-                dry_run          = args.dry_run,
-            )
+                if is_done(fold_dir):
+                    total_skipped += 1
+                    print(f"  Fold {k:2d}/{n_folds_to_run-1}  [SKIPPED — already done]")
+                    continue
 
-            # Record results.
-            all_runs_row = {
-                "config_name":        cname,
-                "epsilon":            epsilon_fixed,
-                "r":                  r,
-                "fold":               k,
-                "precision":          metrics["precision"],
-                "recall":             metrics["recall"],
-                "f1":                 metrics["f1"],
-                "map50":              metrics["map50"],
-                "map5095":            metrics["map5095"],
-                "training_time_sec":  metrics["training_time_sec"],
-            }
-            append_to_all_runs_csv(all_runs_csv, all_runs_row)
-            mark_done(fold_dir)
+                run_label = f"  Fold {k:2d}/{n_folds_to_run-1}"
+                print(f"{run_label}  [TRAINING]  r={r}  eps={epsilon_fixed}")
 
-            # Update fold_rows (replace pre-populated placeholder if present).
-            fold_rows = [r2 for r2 in fold_rows if r2["fold"] != k]
-            fold_rows.append({"fold": k, **metrics})
+                metrics = train_one_fold(
+                    fold_idx         = k,
+                    epsilon          = epsilon_fixed,
+                    r                = r,
+                    kfold_dir        = kfold_dir,
+                    fold_results_dir = fold_dir,
+                    repo_root        = repo_root,
+                    training_cfg     = training_cfg,
+                    dry_run          = args.dry_run,
+                )
 
-            total_done += 1
-            t_sec = metrics["training_time_sec"]
-            remaining = (total_planned - total_done - total_skipped)
-            eta_min = round(remaining * t_sec / 60, 1) if t_sec > 0 else "?"
-            print(
-                f"    P={metrics['precision']:.4f}  R={metrics['recall']:.4f}"
-                f"  F1={metrics['f1']:.4f}  mAP50={metrics['map50']:.4f}"
-                f"  mAP50-95={metrics['map5095']:.4f}"
-                f"  time={t_sec}s  ETA≈{eta_min}min"
-            )
+                # Record results.
+                all_runs_row = {
+                    "config_name":        cname,
+                    "epsilon":            epsilon_fixed,
+                    "r":                  r,
+                    "fold":               k,
+                    "precision":          metrics["precision"],
+                    "recall":             metrics["recall"],
+                    "f1":                 metrics["f1"],
+                    "map50":              metrics["map50"],
+                    "map5095":            metrics["map5095"],
+                    "training_time_sec":  metrics["training_time_sec"],
+                }
+                append_to_all_runs_csv(all_runs_csv, all_runs_row)
+                mark_done(fold_dir)
 
-        # Write per-config summary CSV after all folds for this config.
-        fold_rows_sorted = sorted(fold_rows, key=lambda x: x["fold"])
-        write_fold_metrics_csv(config_dir, fold_rows_sorted)
+                # Update fold_rows (replace pre-populated placeholder if present).
+                fold_rows = [r2 for r2 in fold_rows if r2["fold"] != k]
+                fold_rows.append({"fold": k, **metrics})
+
+                total_done += 1
+                t_sec = metrics["training_time_sec"]
+                remaining = (total_planned - total_done - total_skipped)
+                eta_min = round(remaining * t_sec / 60, 1) if t_sec > 0 else "?"
+                print(
+                    f"    P={metrics['precision']:.4f}  R={metrics['recall']:.4f}"
+                    f"  F1={metrics['f1']:.4f}  mAP50={metrics['map50']:.4f}"
+                    f"  mAP50-95={metrics['map5095']:.4f}"
+                    f"  time={t_sec}s  ETA≈{eta_min}min"
+                )
+
+            # Write per-config summary CSV after all folds for this config.
+            fold_rows_sorted = sorted(fold_rows, key=lambda x: x["fold"])
+            write_fold_metrics_csv(config_dir, fold_rows_sorted)
 
     print("\n" + "=" * 64)
-    print(f"Stage 1 sweep complete.")
+    print(f"{args.stage} sweep complete.")
     print(f"  Runs completed this session: {total_done}")
     print(f"  Runs skipped (already done): {total_skipped}")
     print(f"  All-runs CSV: {all_runs_csv}")
     print("=" * 64)
 
-    if not args.dry_run:
+    if not args.dry_run and args.stage == "stage1":
         print("\nNext step: review all_runs.csv to determine the winning r value,")
         print("then set stage2.fixed.r in configs/sweep_configs.yaml before")
-        print("building and running the Stage 2 sweep.")
+        print("running the Stage 2 sweep.")
 
 
 # ---------------------------------------------------------------------------
@@ -429,6 +453,12 @@ def run_sweep(args):
 def main():
     parser = argparse.ArgumentParser(
         description="Stage 1 sweep runner for alpha-blended-eaf experiments."
+    )
+    parser.add_argument(
+        "--stage",
+        choices=["stage1", "stage2"],
+        default="stage1",
+        help="Experiment stage to run from sweep_configs.yaml",
     )
     parser.add_argument(
         "--sweep-config",
