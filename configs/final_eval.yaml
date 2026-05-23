@@ -1,0 +1,41 @@
+# Final training + unseen evaluation configuration.
+#
+# Workflow:
+#   1. Train one final model on the FULL Japan training set using the
+#      winning Stage 1 / Stage 2 hyperparameters.
+#
+#   2. Evaluate the trained model on unseen-country test sets
+#      (India and China).
+#
+# No cross-validation is used here.
+# This is a single final training run.
+
+random_seed: 42
+
+training:
+  model_yaml: configs/model_eaf.yaml
+
+  # Final selected activation parameters.
+  epsilon: 0.1
+  r: 0.6
+
+  # Standard YOLO training hyperparameters.
+  epochs: 12
+  batch: 4
+  imgsz: 640
+  optimizer: AdamW
+  lr0: 1.0e-3
+  warmup_epochs: 3.0
+  amp: false
+  workers: 16
+  pretrained: false
+
+datasets:
+  japan:
+    dataset_yaml: /content/src/Japan/dataset_full.yaml
+
+  india:
+    dataset_yaml: /content/src/India/dataset_test.yaml
+
+  china:
+    dataset_yaml: /content/src/China_MotorBike/dataset_test.yaml
