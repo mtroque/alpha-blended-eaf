@@ -16,7 +16,7 @@ training:
   model_yaml: configs/model_eaf.yaml
 
   # Final selected activation parameters.
-  epsilon: 0.1
+  epsilon: 0.3
   r: 0.6
 
   # Standard YOLO training hyperparameters.

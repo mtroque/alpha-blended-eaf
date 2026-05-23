@@ -231,8 +231,8 @@ create_test_dataset_yaml () {
 
     cat > "$OUT_YAML" <<EOF
 path: ${DATASET_DIR}
-train: test/images
-val: test/images
+train: train/images
+val: train/images
 
 nc: 9
 
@@ -254,7 +254,7 @@ EOF
 create_test_dataset_yaml \
     "$INDIA_DATASET_DIR" \
     "${INDIA_DATASET_DIR}/dataset_test.yaml" \
-    "India test"
+    "India train"
 
 create_test_dataset_yaml \
     "$CHINA_DATASET_DIR" \
