@@ -1,12 +1,18 @@
 """runner/run_sweep.py
-Stage 1 sweep runner for the alpha-blended-eaf cross-validation experiment.
 
-Runs 4 configurations (r = 0.3, 0.4, 0.5, 0.6) with epsilon fixed at 0.1,
-each evaluated across 10 stratified folds. Total: 40 training runs.
+Cross-validated sweep runner for the alpha-blended-eaf experiments.
+
+Supports:
+  - Stage 1: vary r while epsilon is fixed
+  - Stage 2: vary epsilon while r is fixed at the Stage 1 winner
+
+Each configuration is evaluated using stratified 10-fold cross-validation
+on the RDD2022 Japan dataset with YOLOv8s.
 
 Usage
 -----
     python runner/run_sweep.py \\
+        --stage stage1 \\
         --sweep-config  configs/sweep_configs.yaml \\
         --kfold-dir     /content/src/Japan_kfold \\
         --results-dir   /content/drive/MyDrive/Dissertation_Results/Results \\

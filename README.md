@@ -14,7 +14,10 @@ This repository accompanies an ongoing research project; results and the paper d
 | `data_prep/xml_parser.py` | Converts RDD2022 VOC annotations to YOLO format |
 | `data_prep/kfold_split.py` | Generates stratified 10-fold splits with a fixed seed |
 | `runner/verify_patch.py` | End-to-end sanity check that the activation injection actually works |
-| `runner/run_sweep_stage1.py` | Stage 1 sweep: 4 configs × 10 folds = 40 training runs |
+| `runner/run_sweep.py` | Cross-validated sweep runner for Stage 1 and Stage 2 experiments |
+| `runner/train_final.py` | Trains the final selected configuration on the full Japan dataset |
+| `runner/evaluate_unseen.py` | Evaluates the final model on unseen India and China datasets |
+| `runner/aggregate_results.py` | Generates summary tables and plots from sweep results |
 | `colab_run.sh` | Single entry-point bash script for Colab |
 | `notebooks/EAF_RDD2022_Colab.ipynb` | One-cell Colab notebook that runs the pipeline |
 
@@ -28,7 +31,11 @@ EAF(x)  =     | α·ReLU(x) + (1-α)·EinsteinBase(x),           if -ε ≤ x �
 
 where  α = (x + ε) / (2ε), and EinsteinBase(x, r) = n · tanh( ((1-r)/(1+r)) · tan(x/n) ) with n = 64.
 
-The hyperparameter sweep follows a two-stage protocol (Stage 1 varies r with ε fixed; Stage 2 varies ε with r fixed at the Stage 1 winner), each configuration evaluated with 10-fold stratified cross-validation.
+The hyperparameter search follows a two-stage protocol:
+- Stage 1 varies r while ε is fixed
+- Stage 2 varies ε while r is fixed at the Stage 1 winner
+
+Each configuration is evaluated with 10-fold stratified cross-validation on the RDD2022 Japan dataset using YOLOv8s. The final selected configuration is then trained on the full Japan dataset and evaluated on unseen India and China datasets.
 
 ## Running on Colab
 
@@ -37,7 +44,7 @@ The hyperparameter sweep follows a two-stage protocol (Stage 1 varies r with ε 
 3. Update the `git clone` URL in the second cell to point to your fork of this repo.
 4. Run the cells.
 
-The script is resumable — Colab session limits won't lose your progress.
+The pipeline is resumable. Completed folds write `done.txt` markers, allowing interrupted Colab sessions to continue from the last completed run.
 
 ## Running locally
 
@@ -57,6 +64,19 @@ pip install -e ./ultralytics iterative-stratification scikit-learn pyyaml
 # Verify the patch works.
 python alpha-blended-eaf/runner/verify_patch.py \
     --model-yaml alpha-blended-eaf/configs/model_eaf.yaml
+
+# Run Stage 1 sweep
+python alpha-blended-eaf/runner/run_sweep.py \
+    --stage stage1 \
+    --sweep-config alpha-blended-eaf/configs/sweep_configs.yaml \
+    --kfold-dir /path/to/Japan_kfold \
+    --results-dir /path/to/results \
+    --repo-root alpha-blended-eaf
+
+# Aggregate results
+python alpha-blended-eaf/runner/aggregate_results.py \
+    --runs-csv /path/to/results/sweep_runs/all_runs.csv \
+    --output-dir /path/to/results/sweep_runs
 ```
 
 ## Dependencies

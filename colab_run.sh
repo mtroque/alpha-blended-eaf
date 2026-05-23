@@ -11,10 +11,11 @@
 #   2. Clones or updates pinned Ultralytics v8.4.50
 #   3. Applies the surgical patch (adds AlphaBlendedEAFReLU to Ultralytics)
 #   4. Installs dependencies
-#   5. Downloads RDD2022 Japan to a Drive cache (skip if cached)
-#   6. Converts XML annotations to YOLO format (skip if labels exist)
-#   7. Generates stratified 10-fold splits (skip if folds exist)
-#   8. Verifies the activation patch works end-to-end
+#   5. Downloads RDD2022 Japan, India, and China datasets
+#   6. Converts VOC XML annotations to YOLO label format
+#   7. Creates dataset YAMLs for full-train and unseen evaluation runs
+#   8. Generates stratified 10-fold splits for Japan
+#   9. Verifies the activation patch works end-to-end
 #
 # What it does NOT do:
 #   - Run the sweep (runner/run_sweep.py is built in a later phase)
@@ -222,9 +223,9 @@ convert_xml_to_yolo "${CHINA_DATASET_DIR}/train" "China_MotorBike train"
 # Step 6: create dataset YAMLs for final unseen evaluation
 # ============================================================================
 echo ""
-echo "[6/8] Creating dataset YAMLs for unseen test sets..."
+echo "[6/8] Creating dataset YAMLs for final training and evaluation..."
 
-create_test_dataset_yaml () {
+create_eval_dataset_yaml () {
     local DATASET_DIR=$1
     local OUT_YAML=$2
     local LABEL=$3
@@ -251,12 +252,12 @@ EOF
     echo "      ${LABEL}: wrote ${OUT_YAML}"
 }
 
-create_test_dataset_yaml \
+create_eval_dataset_yaml \
     "$INDIA_DATASET_DIR" \
     "${INDIA_DATASET_DIR}/dataset_test.yaml" \
     "India train"
 
-create_test_dataset_yaml \
+create_eval_dataset_yaml \
     "$CHINA_DATASET_DIR" \
     "${CHINA_DATASET_DIR}/dataset_test.yaml" \
     "China_MotorBike train"
