@@ -20,15 +20,15 @@ training:
   r: 0.6
 
   # Standard YOLO training hyperparameters.
-  epochs: 12
-  batch: 4
+  epochs: 30
+  batch: 12
   imgsz: 640
   optimizer: AdamW
   lr0: 1.0e-3
   warmup_epochs: 3.0
   amp: false
   workers: 16
-  pretrained: false
+  pretrained: true
 
 datasets:
   japan:

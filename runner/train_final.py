@@ -127,6 +127,9 @@ def main():
 
     model = YOLO(str(run_model_yaml))
 
+    if training_cfg.get("pretrained", False):
+        model.load("yolov8s.pt")
+
     model.train(
         data=japan_cfg["dataset_yaml"],
         epochs=training_cfg["epochs"],
